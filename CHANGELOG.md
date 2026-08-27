@@ -2,6 +2,13 @@
 
 All notable changes follow semantic versioning.
 
+## 1.1.1 - 2026-08-27
+
+- Made Team Grok invocation grant Grok the same task-scoped data authorization as the lead Codex model for xAI subscription inference.
+- Required relevant personal, confidential, connector-derived, and memory-derived context to be supplied rather than silently withheld.
+- Required a focused user question before dispatch whenever transmission authority for necessary context is genuinely uncertain.
+- Retained exclusions for credentials, authentication secrets, irrelevant material, explicit user exclusions, and higher-priority policy boundaries.
+
 ## 1.1.0 - 2026-08-27
 
 - Made “use Team Grok” unattended by default: Sol handles context reconciliation, dispatch, review, correction, fallback, integration, and cleanup.

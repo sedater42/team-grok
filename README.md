@@ -71,7 +71,7 @@ Permissions do not expand automatically. New Grok tools, ambient skills, subagen
 
 Delegated prompt text, curated context, filenames, and staged source content are sent to xAI for cloud inference through the user's subscription. Team Grok is not local inference. The runner disables its own use of telemetry/trace upload environment switches, but that does not change xAI's service-side handling of subscription traffic.
 
-Never delegate secrets, credentials, raw Codex memory, or information that is not authorized to leave the machine. Secret detection is best-effort, not complete. See [Privacy](docs/privacy.md), [Threat model](docs/threat-model.md), and [Support matrix](docs/support-matrix.md).
+Invoking Team Grok authorizes Grok to receive the same task-scoped data Codex may use for that task. Relevant personal, confidential, connector-derived, and memory-derived context should be included rather than silently withheld; memory stores are distilled only to remove unrelated material. Credentials, authentication secrets, explicit exclusions, irrelevant content, and material forbidden by higher-priority instructions remain excluded. If transmission authority for a relevant item is genuinely uncertain, Codex asks before dispatch instead of handicapping Grok's context. Secret detection is best-effort, not complete. See [Privacy](docs/privacy.md), [Threat model](docs/threat-model.md), and [Support matrix](docs/support-matrix.md).
 
 ## Project status
 

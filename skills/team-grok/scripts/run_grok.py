@@ -23,7 +23,7 @@ from typing import Any
 DEFAULT_MODEL = "auto"
 DEFAULT_EFFORT = "xhigh"
 MINIMUM_MODEL = (4, 6)
-RUNNER_VERSION = "1.1.0"
+RUNNER_VERSION = "1.1.1"
 SCHEMA_VERSION = 2
 MINIMUM_GROK_VERSION = (1, 0, 5)
 SUBSCRIPTION_MARKER = "You are logged in with grok.com."
