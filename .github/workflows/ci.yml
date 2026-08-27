@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        python: ["3.9", "3.11", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Compile
+        run: python -m py_compile skills/team-grok/scripts/run_grok.py
+      - name: Unit tests
+        run: |
+          python -m unittest discover -s skills/team-grok/tests -v
+          python -m unittest discover -s tests -v
+      - name: Reject committed private artifacts
+        run: |
+          if git grep -n -E 'XAI_API_KEY=|BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY' -- ':!.github/workflows/ci.yml'; then
+            echo "Potential private artifact found"
+            exit 1
+          fi
+
+  manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate JSON and versions
+        run: |
+          python -m json.tool .codex-plugin/plugin.json >/dev/null
+          python -m json.tool compatibility.json >/dev/null
+          python - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+          plugin = json.loads(Path('.codex-plugin/plugin.json').read_text())
+          compat = json.loads(Path('compatibility.json').read_text())
+          runner = Path('skills/team-grok/scripts/run_grok.py').read_text()
+          version = re.search(r'RUNNER_VERSION = "([^"]+)"', runner).group(1)
+          assert plugin['version'] == compat['team_grok_version'] == version
+          PY

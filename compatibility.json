@@ -1,0 +1,33 @@
+{
+  "schema_version": 2,
+  "team_grok_version": "1.1.0",
+  "platforms": {
+    "macos": "supported",
+    "linux": "unsupported_fail_closed",
+    "windows": "unsupported_fail_closed"
+  },
+  "python": ">=3.9",
+  "grok_cli": ">=1.0.5",
+  "capability_probe": "required CLI flags discovered from grok --help on every preflight",
+  "binary_path": "~/.grok/bin/grok",
+  "xai_codesign_team": "5Y6N3AJ54S",
+  "authentication": "grok.com subscription only",
+  "model_policy": {
+    "selection": "newest_numeric_subscription_model",
+    "minimum": "grok-4.6",
+    "reasoning_effort": "xhigh"
+  },
+  "permissions": {
+    "always": ["Read", "Grep"],
+    "workspace_only": ["Edit"],
+    "opt_in": ["WebSearch", "WebFetch"],
+    "forbidden": ["Bash", "subagents", "memory", "workflows", "ambient_extensions"]
+  },
+  "unattended_controls": {
+    "context_coverage_attestation": true,
+    "durable_run_status_and_heartbeat": true,
+    "proof_pack": true,
+    "explicit_workspace_write_allowlist": true,
+    "immutable_sol_decision": true
+  }
+}

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Team Grok"
+  short_description: "Sol safely delegates to subscription-backed Grok"
+  default_prompt: "Use $team-grok quietly in the background: reconcile and supply every task-relevant authorized file and fact, let Sol independently verify and integrate only accepted work, and use the embedded identity-verified Luna fallback only when quality requires it."
+  brand_color: "#111111"
+policy:
+  allow_implicit_invocation: true

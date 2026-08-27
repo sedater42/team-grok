@@ -1,0 +1,11 @@
+# Privacy
+
+Team Grok sends the effective task prompt and any supplied staged content to xAI's Grok Build service through the user's authenticated subscription. It does not provide local inference and it does not make delegated data private from xAI.
+
+The runner removes inherited API keys, xAI/Grok endpoint overrides, and OpenTelemetry variables from the child environment. It sets documented Grok telemetry, trace-upload, feedback, memory, workflow, and subagent switches off. These controls minimize optional client behavior; they do not override xAI account terms, retention, safety processing, or service-side logging.
+
+Sol must reconcile every handoff against the task working set. All task-relevant authorized files and facts that Sol relies on should be supplied directly or summarized; “all context” never means credentials, raw Codex memory, whole conversation archives, unrelated personal information, or material not authorized for xAI processing. Path/name heuristics block common credential locations and file formats, and a bounded scan rejects a few high-confidence private-key/API-key patterns in ordinary files. This is not comprehensive content classification and cannot find every sensitive value.
+
+Original absolute source/context paths are retained only in the local runner result and private run record. Grok receives anonymous context IDs and isolated stage paths, though filenames and contents remain visible. Run records and proof packs are mode 0600 inside a mode-0700 record directory and may contain Grok's full response and local source paths; Sol should store them only in an appropriate task-local `work/` area. Read-only stages are deleted automatically. Workspace stages persist until Sol runs `stage-cleanup`; they are mode-0700 temporary directories owned by the current user.
+
+Opting into `--allow-web` adds a second disclosure boundary: Grok may use supplied information to formulate searches or fetch public pages. Use it only when necessary and safe.

@@ -1,0 +1,20 @@
+{
+  "name": "team-grok",
+  "version": "1.1.0",
+  "description": "A Sol-led, subscription-only Grok delegation workflow with isolated staging, verification, and an embedded Luna fallback.",
+  "author": {
+    "name": "Team Grok Contributors"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["codex", "grok", "delegation", "subscription", "orchestration"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Team Grok",
+    "shortDescription": "Sol safely delegates to subscription-backed Grok.",
+    "longDescription": "Delegate bounded work to the newest Grok model available through the user's Grok Build subscription. Sol automatically reconciles task context, keeps durable run evidence, enforces write scope, retains quality control, and can use an identity-verified Luna route when Grok quality is insufficient.",
+    "developerName": "Team Grok Contributors",
+    "category": "Developer Tools",
+    "capabilities": ["delegation", "code-review", "research"],
+    "defaultPrompt": "Use Team Grok for this task. Quietly reconcile and supply all task-relevant authorized context, then have Sol independently verify and integrate only accepted work."
+  }
+}
