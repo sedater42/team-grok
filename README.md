@@ -17,15 +17,15 @@ Team Grok is not affiliated with, endorsed by, or sponsored by xAI or OpenAI. â€
 
 ## Install
 
-### Install or update with Codex
+### Install with Codex
 
-In a Codex task on each Mac, invoke the built-in installer with:
+For a first installation, invoke the built-in installer in a Codex task on each Mac:
 
 ```text
-$skill-installer Install or update the team-grok skill from https://github.com/sedater42/team-grok/tree/main/skills/team-grok
+$skill-installer Install the team-grok skill from https://github.com/sedater42/team-grok/tree/main/skills/team-grok
 ```
 
-Codex detects installed skill changes automatically; restart Codex if the updated version does not appear. The installer chooses the supported user-skill location for that Codex build. Prefer a tagged release for reproducibility.
+The built-in installer refuses to overwrite an existing skill. For an update, ask Codex to preserve the installed `team-grok` directory as a timestamped backup, install the same GitHub skill path, verify the expected runner version, and run Team Grok doctor before use. Codex detects installed skill changes automatically; restart Codex if the new version does not appear. The installer chooses the supported user-skill location for that Codex build. Prefer a tagged release for reproducibility.
 
 ### Local plugin development
 
