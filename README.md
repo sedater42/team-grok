@@ -17,13 +17,15 @@ Team Grok is not affiliated with, endorsed by, or sponsored by xAI or OpenAI. â€
 
 ## Install
 
-### Standalone skill with GitHub CLI
+### Install or update with Codex
 
-```bash
-gh skill install sedater42/team-grok team-grok --agent codex --scope user
+In a Codex task on each Mac, invoke the built-in installer with:
+
+```text
+$skill-installer Install or update the team-grok skill from https://github.com/sedater42/team-grok/tree/main/skills/team-grok
 ```
 
-GitHub CLI tracks the source and can update an installed skill. Prefer a tagged release for reproducibility. Codex discovers personal skills under `~/.codex/skills`; restart Codex after installation if it was already running.
+Codex detects installed skill changes automatically; restart Codex if the updated version does not appear. The installer chooses the supported user-skill location for that Codex build. Prefer a tagged release for reproducibility.
 
 ### Local plugin development
 
@@ -75,7 +77,7 @@ Invoking Team Grok authorizes Grok to receive the same task-scoped data Codex ma
 
 ## Project status
 
-Version 1.1.0 is the macOS-first unattended-orchestration release. Offline tests run in CI; live subscription tests must run manually on a trusted, logged-in Mac and must never place session state in CI.
+Version 1.1.5 is the macOS-first unattended-orchestration release with fail-closed handling for disabled Claude-compatibility discovery records. Offline tests run in CI; live subscription tests must run manually on a trusted, logged-in Mac and must never place session state in CI.
 
 - [Architecture](docs/architecture.md)
 - [Research and precedents](docs/research-and-precedents.md)

@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "team_grok_version": "1.1.1",
+  "team_grok_version": "1.1.5",
   "platforms": {
     "macos": "supported",
     "linux": "unsupported_fail_closed",
@@ -24,6 +24,8 @@
     "forbidden": ["Bash", "subagents", "memory", "workflows", "ambient_extensions"]
   },
   "unattended_controls": {
+    "claude_marker_override": "1",
+    "explicit_disabled_compatibility_filter": true,
     "context_coverage_attestation": true,
     "durable_run_status_and_heartbeat": true,
     "proof_pack": true,

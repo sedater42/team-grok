@@ -2,6 +2,14 @@
 
 All notable changes follow semantic versioning.
 
+## 1.1.5 - 2026-08-27
+
+- Fixed Grok CLI 1.0.5 compatibility discovery so MCP records are ignored only when both `disabled` is exactly `true` and `compatibilityStatus` is exactly `disabled`; active, malformed, and ambiguously disabled entries still fail closed.
+- Added the runner-controlled `_GROK_CLAUDE_MARKER_OVERRIDE=1` isolation workaround and prevented caller values from entering the child environment.
+- Ignored project instructions only when the same two-field disabled proof is present, while active and ambiguous instructions remain subject to the supplied-context gate.
+- Added separate evidence for total versus active extension entries and for explicitly disabled MCP and project-instruction records that were ignored.
+- Added regression coverage for the MacBook repair and superseded the one-off local runner version 1.1.4.
+
 ## 1.1.1 - 2026-08-27
 
 - Made Team Grok invocation grant Grok the same task-scoped data authorization as the lead Codex model for xAI subscription inference.

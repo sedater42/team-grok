@@ -46,7 +46,7 @@ Read [the CLI contract](references/grok-cli-contract.md) before the first Grok i
    python3 /absolute/path/to/team-grok/scripts/run_grok.py doctor --cwd /absolute/workspace
    ```
 
-   Require `subscription_authenticated: true`, `authentication_route: grok.com subscription`, the newest catalog model, `requested_effort: xhigh`, the pinned xAI signing team, compatible CLI version, no active Grok hooks/plugins/MCP/LSP/permission rules, and no API/provider overrides. Ambient skill metadata may be enumerated by `grok inspect`; the runner excludes skill tools from the run but does not claim that metadata discovery is impossible.
+   Require `subscription_authenticated: true`, `authentication_route: grok.com subscription`, the newest catalog model, `requested_effort: xhigh`, the pinned xAI signing team, compatible CLI version, no active Grok hooks/plugins/MCP/LSP/permission rules, and no API/provider overrides. An MCP or project-instruction compatibility record may be ignored only when `disabled` is exactly `true` and `compatibilityStatus` is exactly `disabled`; doctor evidence reports ignored records separately. Ambient skill metadata may be enumerated by `grok inspect`; the runner excludes skill tools from the run but does not claim that metadata discovery is impossible.
 
 5. Run one bounded lane by default.
 

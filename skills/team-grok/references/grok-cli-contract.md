@@ -16,6 +16,8 @@ The model selector is adaptive: if the subscription catalog later offers Grok 4.
 
 The CLI is invoked with `--no-auto-update` so a binary is never replaced mid-run. A user-installed signed upgrade is used on the next invocation after the compatibility and subscription checks pass.
 
+Grok CLI 1.0.5 can import Claude permission rules even when the documented Claude compatibility environment switches are disabled. Team Grok therefore injects `_GROK_CLAUDE_MARKER_OVERRIDE` as the exact string `1` into its sanitized child environment and never inherits a caller-supplied value. This is a compatibility workaround, not trust evidence: `grok inspect --json` must still prove zero ambient permission rules and no active compatibility surfaces. A future CLI that changes the behavior remains fail-closed at those postconditions.
+
 ## Commands
 
 ```bash
@@ -62,13 +64,13 @@ Each run:
 
 1. resolves only the official home-path binary and validates its Apple signature with `/usr/bin/codesign`;
 2. creates a minimal environment, removes `GROK_*`, `XAI_*`, `OTEL_*`, common API keys, and endpoint overrides, then installs controlled no-memory/no-subagent/no-workflow/no-telemetry settings;
-3. runs `grok inspect --json` and refuses active hooks, plugins, MCP/LSP servers, permission rules, remote compatibility settings, non-session Claude/Cursor/Codex compatibility surfaces, or applicable project instructions not explicitly supplied; known enabled `sessions` metadata may be enumerated but is not exposed as a tool or imported into the run;
+3. runs `grok inspect --json` and refuses active hooks, plugins, MCP/LSP servers, permission rules, remote compatibility settings, non-session Claude/Cursor/Codex compatibility surfaces, or applicable project instructions not explicitly supplied; an MCP record or project instruction is ignored only when `disabled` is exactly `true` and `compatibilityStatus` is exactly `disabled`, while malformed or ambiguous MCP records fail and ambiguous instructions remain supplied-context gated; known enabled `sessions` metadata may be enumerated but is not exposed as a tool or imported into the run;
 4. scans discovered Grok TOML for quoted, dotted, inline, or table-form API/provider/model overrides;
 5. fingerprints configuration before and after inference;
 6. proves the `grok.com` login and adaptive model selection; and
 7. requires `end_turn`, bounded output, positive numeric model usage, receipt success, and original-source integrity.
 
-`grok inspect` may enumerate bundled and user skill metadata. Team Grok does not expose a skill tool in `--tools`, injects an explicit no-ambient-skill rule, and reports any non-bundled metadata. This is defense in depth, not a claim that the CLI is a complete security sandbox.
+`grok inspect` may enumerate bundled and user skill metadata. Team Grok does not expose a skill tool in `--tools`, injects an explicit no-ambient-skill rule, and reports any non-bundled metadata. Doctor/run evidence separately reports total and active extension counts plus explicitly disabled MCP and project-instruction records that were ignored. This is defense in depth, not a claim that the CLI is a complete security sandbox.
 
 ## Permission boundary
 

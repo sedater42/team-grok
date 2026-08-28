@@ -34,6 +34,22 @@ class TeamGrokRunnerTests(unittest.TestCase):
             "authentication_route": "grok.com subscription",
         }
 
+    @staticmethod
+    def inspect_fixture(**overrides) -> dict:
+        payload = {
+            "hooks": [],
+            "plugins": [],
+            "mcpServers": [],
+            "lspServers": [],
+            "permissions": {"loaded": 0},
+            "projectInstructions": [],
+            "configSources": {"layers": []},
+            "skills": [],
+            "externalCompat": {"remoteSettingsLoaded": False, "cells": []},
+        }
+        payload.update(overrides)
+        return payload
+
     def test_receipt_requires_exact_success_line_after_heading(self) -> None:
         staged_path = "/tmp/team-grok-stage/workspace/sources/001-source.txt"
         handoff = {
@@ -98,6 +114,19 @@ class TeamGrokRunnerTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {"HOME": "/tmp/home"}, clear=True):
             self.assertEqual(runner.run_environment(False)["GROK_WEB_FETCH"], "0")
             self.assertNotIn("GROK_WEB_FETCH", runner.run_environment(True))
+
+    def test_claude_marker_override_is_exact_and_runner_controlled(self) -> None:
+        marker = "_GROK_CLAUDE_MARKER_OVERRIDE"
+        with mock.patch.dict(
+            os.environ,
+            {"HOME": "/tmp/home", "PATH": "/usr/bin", marker: "caller-controlled"},
+            clear=True,
+        ):
+            child_env, removed = runner.sanitized_environment()
+            run_env = runner.run_environment(False)
+        self.assertEqual(child_env[marker], "1")
+        self.assertEqual(run_env[marker], "1")
+        self.assertIn(marker, removed)
 
     def test_model_policy_selects_newest_and_rejects_downgrade(self) -> None:
         models = ["grok-4.5", "grok-4.6", "grok-4.7"]
@@ -299,6 +328,86 @@ class TeamGrokRunnerTests(unittest.TestCase):
                 runner.inspect_configuration(
                     Path("/fake/grok"), Path("/tmp"), {}, 30, []
                 )
+
+    def test_mcp_entries_ignore_only_explicitly_disabled_compatibility_records(self) -> None:
+        disabled = {
+            "name": "paste",
+            "transport": "http",
+            "target": "http://127.0.0.1:39725/mcp",
+            "source": {"type": "claudeJson", "path": "~/.claude.json"},
+            "disabled": True,
+            "compatibilityStatus": "disabled",
+            "vendor": "claude",
+        }
+        completed = subprocess.CompletedProcess(
+            ["grok", "inspect", "--json"],
+            0,
+            stdout=json.dumps(self.inspect_fixture(mcpServers=[disabled])),
+            stderr="",
+        )
+        with mock.patch.object(runner, "run_command", return_value=completed):
+            summary, _configs = runner.inspect_configuration(
+                Path("/fake/grok"), Path("/tmp"), {}, 30, []
+            )
+        self.assertEqual(summary["reported_extension_counts"]["mcpServers"], 1)
+        self.assertEqual(summary["extension_counts"]["mcpServers"], 0)
+        self.assertEqual(summary["ignored_disabled_mcp_servers"][0]["name"], "paste")
+
+        rejected = (
+            ("active", {"name": "active", "disabled": False, "compatibilityStatus": "enabled"}),
+            ("ambiguous", {"name": "ambiguous", "disabled": True}),
+            ("malformed", {"disabled": True, "compatibilityStatus": "disabled"}),
+        )
+        for label, entry in rejected:
+            payload = self.inspect_fixture(mcpServers=[entry])
+            completed = subprocess.CompletedProcess(
+                ["grok", "inspect", "--json"], 0, stdout=json.dumps(payload), stderr=""
+            )
+            with self.subTest(label=label), mock.patch.object(
+                runner, "run_command", return_value=completed
+            ), self.assertRaises(runner.TeamGrokError):
+                runner.inspect_configuration(Path("/fake/grok"), Path("/tmp"), {}, 30, [])
+
+    def test_project_instructions_ignore_only_explicitly_disabled_compatibility_records(self) -> None:
+        disabled_path = "/tmp/disabled-claude-instruction.md"
+        disabled = {
+            "path": disabled_path,
+            "scope": "global",
+            "fileType": "Claude.md",
+            "disabled": True,
+            "compatibilityStatus": "disabled",
+        }
+        completed = subprocess.CompletedProcess(
+            ["grok", "inspect", "--json"],
+            0,
+            stdout=json.dumps(self.inspect_fixture(projectInstructions=[disabled])),
+            stderr="",
+        )
+        with mock.patch.object(runner, "run_command", return_value=completed):
+            summary, _configs = runner.inspect_configuration(
+                Path("/fake/grok"), Path("/tmp"), {}, 30, []
+            )
+        self.assertEqual(summary["project_instructions"], [])
+        self.assertEqual(
+            summary["ignored_disabled_project_instructions"][0]["path"],
+            str(Path(disabled_path).resolve()),
+        )
+
+        required = (
+            {"path": "/tmp/active-instruction.md"},
+            {"path": "/tmp/ambiguous-instruction.md", "disabled": True},
+        )
+        for item in required:
+            completed = subprocess.CompletedProcess(
+                ["grok", "inspect", "--json"],
+                0,
+                stdout=json.dumps(self.inspect_fixture(projectInstructions=[item])),
+                stderr="",
+            )
+            with self.subTest(item=item), mock.patch.object(
+                runner, "run_command", return_value=completed
+            ), self.assertRaisesRegex(runner.TeamGrokError, "not explicitly supplied"):
+                runner.inspect_configuration(Path("/fake/grok"), Path("/tmp"), {}, 30, [])
 
     def test_external_compat_nested_schema_and_unknown_surfaces_fail_closed(self) -> None:
         baseline = {

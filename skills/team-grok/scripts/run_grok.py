@@ -17,13 +17,13 @@ import sys
 import tempfile
 import time
 import uuid
-from typing import Any
+from typing import Any, Union
 
 
 DEFAULT_MODEL = "auto"
 DEFAULT_EFFORT = "xhigh"
 MINIMUM_MODEL = (4, 6)
-RUNNER_VERSION = "1.1.1"
+RUNNER_VERSION = "1.1.5"
 SCHEMA_VERSION = 2
 MINIMUM_GROK_VERSION = (1, 0, 5)
 SUBSCRIPTION_MARKER = "You are logged in with grok.com."
@@ -76,6 +76,7 @@ SAFE_ENV_KEYS = (
     "TERM",
 )
 CONTROLLED_GROK_ENV = {
+    "_GROK_CLAUDE_MARKER_OVERRIDE": "1",
     "GROK_DISABLE_AUTOUPDATER": "1",
     "GROK_EXTERNAL_OTEL": "0",
     "GROK_FEEDBACK_ENABLED": "0",
@@ -1119,6 +1120,7 @@ def sanitized_environment() -> tuple[dict[str, str], list[str]]:
         key
         for key in os.environ
         if key.startswith("GROK_")
+        or key == "_GROK_CLAUDE_MARKER_OVERRIDE"
         or key.startswith("XAI_")
         or key.startswith("OTEL_")
         or key in {"CLI_CHAT_PROXY_BASE_URL", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"}
@@ -1348,6 +1350,96 @@ def instruction_is_supplied(path: Path, verified_sources: list[dict[str, Any]]) 
     return False
 
 
+def validate_compatibility_state(item: dict[str, Any], label: str) -> None:
+    if "disabled" in item and type(item["disabled"]) is not bool:
+        raise TeamGrokError(
+            f"Refusing unattended Grok run: `grok inspect` returned malformed {label} evidence"
+        )
+    if "compatibilityStatus" in item and not isinstance(
+        item["compatibilityStatus"], str
+    ):
+        raise TeamGrokError(
+            f"Refusing unattended Grok run: `grok inspect` returned malformed {label} evidence"
+        )
+
+
+def is_explicitly_disabled_compatibility_entry(item: dict[str, Any]) -> bool:
+    return item.get("disabled") is True and item.get("compatibilityStatus") == "disabled"
+
+
+def normalize_mcp_entries(value: Union[list[Any], dict[str, Any]]) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    if isinstance(value, list):
+        candidates = [(None, item) for item in value]
+    else:
+        candidates = list(value.items())
+    for key_name, raw_item in candidates:
+        if not isinstance(raw_item, dict):
+            raise TeamGrokError(
+                "Refusing unattended Grok run: `grok inspect` returned malformed mcpServers evidence"
+            )
+        item = dict(raw_item)
+        if key_name is not None:
+            if not isinstance(key_name, str) or not key_name:
+                raise TeamGrokError(
+                    "Refusing unattended Grok run: `grok inspect` returned malformed mcpServers evidence"
+                )
+            if "name" in item and item["name"] != key_name:
+                raise TeamGrokError(
+                    "Refusing unattended Grok run: `grok inspect` returned ambiguous mcpServers evidence"
+                )
+            item.setdefault("name", key_name)
+        if not isinstance(item.get("name"), str) or not item["name"]:
+            raise TeamGrokError(
+                "Refusing unattended Grok run: `grok inspect` returned malformed mcpServers evidence"
+            )
+        validate_compatibility_state(item, "mcpServers")
+        for field in ("transport", "target", "vendor"):
+            if field in item and not isinstance(item[field], str):
+                raise TeamGrokError(
+                    "Refusing unattended Grok run: `grok inspect` returned malformed mcpServers evidence"
+                )
+        source = item.get("source")
+        if source is not None:
+            if not isinstance(source, dict):
+                raise TeamGrokError(
+                    "Refusing unattended Grok run: `grok inspect` returned malformed mcpServers evidence"
+                )
+            for field in ("type", "path"):
+                if field in source and not isinstance(source[field], str):
+                    raise TeamGrokError(
+                        "Refusing unattended Grok run: `grok inspect` returned malformed mcpServers evidence"
+                    )
+        entries.append(item)
+    return entries
+
+
+def classify_mcp_entries(
+    value: Union[list[Any], dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    active: list[dict[str, Any]] = []
+    ignored: list[dict[str, Any]] = []
+    for item in normalize_mcp_entries(value):
+        if is_explicitly_disabled_compatibility_entry(item):
+            source = item.get("source") if isinstance(item.get("source"), dict) else {}
+            ignored.append(
+                {
+                    "name": item["name"],
+                    "vendor": item.get("vendor"),
+                    "source_type": source.get("type"),
+                    "source_path": source.get("path"),
+                }
+            )
+            continue
+        if item.get("disabled") is True or item.get("compatibilityStatus") == "disabled":
+            raise TeamGrokError(
+                "Refusing unattended Grok run: `grok inspect` returned ambiguously disabled "
+                f"mcpServers evidence for {item['name']!r}"
+            )
+        active.append(item)
+    return active, ignored
+
+
 def inspect_configuration(
     binary: Path,
     cwd: Path,
@@ -1366,13 +1458,20 @@ def inspect_configuration(
         raise TeamGrokError("`grok inspect --json` returned an unexpected structure")
 
     extension_counts: dict[str, int] = {}
+    reported_extension_counts: dict[str, int] = {}
+    ignored_disabled_mcp_servers: list[dict[str, Any]] = []
     for key in ("hooks", "plugins", "mcpServers", "lspServers"):
         if key not in payload or not isinstance(payload[key], (list, dict)):
             raise TeamGrokError(
                 f"Refusing unattended Grok run: `grok inspect` returned an incompatible {key} schema"
             )
         value = payload[key]
-        count = len(value)
+        reported_extension_counts[key] = len(value)
+        if key == "mcpServers":
+            active_mcp_servers, ignored_disabled_mcp_servers = classify_mcp_entries(value)
+            count = len(active_mcp_servers)
+        else:
+            count = len(value)
         extension_counts[key] = count
         if count:
             raise TeamGrokError(
@@ -1396,6 +1495,7 @@ def inspect_configuration(
         raise TeamGrokError("Refusing unattended Grok run: ambient Grok permission rules are active")
 
     project_instructions: list[dict[str, Any]] = []
+    ignored_disabled_project_instructions: list[dict[str, Any]] = []
     raw_project_instructions = payload.get("projectInstructions")
     if not isinstance(raw_project_instructions, list):
         raise TeamGrokError(
@@ -1406,7 +1506,17 @@ def inspect_configuration(
             raise TeamGrokError(
                 "Refusing unattended Grok run: `grok inspect` returned malformed project instruction evidence"
             )
+        validate_compatibility_state(item, "project instruction")
         instruction_path = Path(item["path"]).expanduser().resolve()
+        if is_explicitly_disabled_compatibility_entry(item):
+            ignored_disabled_project_instructions.append(
+                {
+                    "path": str(instruction_path),
+                    "scope": item.get("scope"),
+                    "file_type": item.get("fileType"),
+                }
+            )
+            continue
         if verified_sources is not None and not instruction_is_supplied(
             instruction_path, verified_sources
         ):
@@ -1497,7 +1607,10 @@ def inspect_configuration(
         "project_root": payload.get("projectRoot"),
         "project_trusted": payload.get("projectTrusted"),
         "project_instructions": project_instructions,
+        "ignored_disabled_project_instructions": ignored_disabled_project_instructions,
         "extension_counts": extension_counts,
+        "reported_extension_counts": reported_extension_counts,
+        "ignored_disabled_mcp_servers": ignored_disabled_mcp_servers,
         "ambient_skill_count": len(skill_summary),
         "non_bundled_skills": [
             item for item in skill_summary if item.get("source_type") != "bundled"
